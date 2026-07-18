@@ -47,7 +47,19 @@ test("recommendation API labels non-model fallback", async () => {
   assert.match(route, /model:\s*MODEL/);
   assert.match(route, /"gpt-5\.6-sol"/);
   assert.match(route, /engine:\s*"Rules v1",\s*mode:\s*"deterministic"/);
+  assert.match(route, /engine:\s*responseModel,\s*mode:\s*"ai-advisory"/);
   assert.match(route, /type:\s*"json_schema"/);
+  assert.doesNotMatch(route, /console\.(log|error|warn)/);
+});
+
+test("OpenAI credentials and endpoint stay out of client bundles", async () => {
+  const files = await filesBelow(new URL("../dist/client/", import.meta.url));
+  const text = (await Promise.all(
+    files.filter((file) => /\.(js|html|json|css|map)$/.test(file.pathname)).map((file) => readFile(file, "utf8")),
+  )).join("\n");
+  assert.doesNotMatch(text, /OPENAI_API_KEY/);
+  assert.doesNotMatch(text, /api\.openai\.com/);
+  assert.doesNotMatch(text, /\/v1\/responses/);
 });
 
 test("deployment metadata declares durable evidence storage", async () => {

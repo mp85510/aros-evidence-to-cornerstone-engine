@@ -55,8 +55,14 @@ export async function POST(request: Request) {
     if (!response.ok) throw new Error(`OpenAI request failed with ${response.status}`);
     const body = await response.json() as Record<string, unknown>;
     const recommendation = JSON.parse(outputText(body));
-    return Response.json({ recommendation, engine: MODEL, mode: "ai-advisory", responseId: body.id });
-  } catch (error) {
-    return Response.json({ recommendation: fallback, engine: "Rules v1", mode: "fallback", note: error instanceof Error ? error.message : "AI advisory unavailable" });
+    const responseModel = typeof body.model === "string" ? body.model : MODEL;
+    return Response.json({ recommendation, engine: responseModel, mode: "ai-advisory", responseId: body.id });
+  } catch {
+    return Response.json({
+      recommendation: fallback,
+      engine: "Rules v1",
+      mode: "fallback",
+      note: "GPT advisory is unavailable; Rules v1 was applied.",
+    });
   }
 }
