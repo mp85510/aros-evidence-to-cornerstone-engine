@@ -1,68 +1,120 @@
+import {
+  RECOMMENDATION_SCHEMA_VERSION,
+  runAdvisory,
+  SERVER_ENVIRONMENT,
+} from "../../../lib/advisory.mjs";
 import { deterministicRecommendation } from "../../../lib/governance.mjs";
+import {
+  advisoryActor,
+  rateLimitIdentity,
+  readJsonObject,
+  sanitizeAdvisoryRecord,
+} from "../../../lib/server-contracts.mjs";
+import {
+  database,
+  enforceRateLimit,
+  ensureSchema,
+  publicError,
+} from "../../../lib/server-store";
 
-const MODEL = "gpt-5.6-sol";
+const MAX_ADVISORY_BYTES = 8_000;
 
-function outputText(response: Record<string, unknown>) {
-  const output = Array.isArray(response.output) ? response.output : [];
-  for (const item of output as Array<Record<string, unknown>>) {
-    if (item.type !== "message" || !Array.isArray(item.content)) continue;
-    for (const content of item.content as Array<Record<string, unknown>>) {
-      if (content.type === "output_text" && typeof content.text === "string") return content.text;
-    }
-  }
-  return "";
+function storageFallback(record: Record<string, unknown>) {
+  return {
+    recommendation: deterministicRecommendation(record),
+    engine: "Rules v1",
+    mode: "fallback",
+    schemaVersion: RECOMMENDATION_SCHEMA_VERSION,
+    latencyMs: 0,
+    fallbackState: "storage_failure",
+    requestResult: "not_recorded",
+    responseId: null,
+    advisoryId: null,
+    note: "GPT advisory was not run because its audit record could not be stored. Rules v1 was applied.",
+  };
 }
 
 export async function POST(request: Request) {
-  const record = await request.json() as Record<string, unknown>;
-  const fallback = deterministicRecommendation(record);
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return Response.json({ recommendation: fallback, engine: "Rules v1", mode: "deterministic", note: "GPT advisory is not configured; no model output was represented as authority." });
+  const parsed = await readJsonObject(request, MAX_ADVISORY_BYTES);
+  if (!parsed.ok) return publicError(parsed.status, parsed.code, parsed.error);
+
+  const sanitized = sanitizeAdvisoryRecord(parsed.value);
+  if (!sanitized.ok) return publicError(sanitized.status, sanitized.code, sanitized.error);
+  const record = sanitized.value;
+
+  const db = database();
+  if (!db) {
+    return Response.json(storageFallback(record), {
+      status: 503,
+      headers: { "cache-control": "no-store" },
+    });
   }
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: { "authorization": `Bearer ${apiKey}`, "content-type": "application/json" },
-      body: JSON.stringify({
-        model: MODEL,
-        store: false,
-        reasoning: { effort: "low" },
-        input: [
-          { role: "developer", content: "You are an enterprise governance architect. Analyze evidence, but never grant authority. Repetition is a drift signal, not jurisdiction. Recommend the smallest reviewable next action. Do not invent owners, policies, or facts." },
-          { role: "user", content: JSON.stringify(record) },
-        ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "governance_recommendation",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                headline: { type: "string" },
-                rationale: { type: "string" },
-                nextAction: { type: "string" },
-                risk: { type: "string", enum: ["low", "medium", "high"] },
-              },
-              required: ["headline", "rationale", "nextAction", "risk"],
-              additionalProperties: false,
-            },
-          },
-        },
-      }),
-    });
-    if (!response.ok) throw new Error(`OpenAI request failed with ${response.status}`);
-    const body = await response.json() as Record<string, unknown>;
-    const recommendation = JSON.parse(outputText(body));
-    const responseModel = typeof body.model === "string" ? body.model : MODEL;
-    return Response.json({ recommendation, engine: responseModel, mode: "ai-advisory", responseId: body.id });
+    await ensureSchema(db);
   } catch {
-    return Response.json({
-      recommendation: fallback,
-      engine: "Rules v1",
-      mode: "fallback",
-      note: "GPT advisory is unavailable; Rules v1 was applied.",
+    return Response.json(storageFallback(record), {
+      status: 503,
+      headers: { "cache-control": "no-store" },
     });
   }
+
+  const rate = await enforceRateLimit(db, rateLimitIdentity(request), "architect-advisory", 20);
+  const result = rate.allowed
+    ? await runAdvisory(record, {
+      apiKey: SERVER_ENVIRONMENT.gptConfigured ? process.env.OPENAI_API_KEY : undefined,
+      timeoutMs: 15_000,
+    })
+    : {
+      recommendation: deterministicRecommendation(record),
+      engine: "Rules v1",
+      mode: "fallback",
+      schemaVersion: RECOMMENDATION_SCHEMA_VERSION,
+      latencyMs: 0,
+      fallbackState: "rate_limit",
+      requestResult: "application_rate_limited",
+      responseId: null,
+    };
+
+  const advisoryId = `ADV-${crypto.randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase()}`;
+  try {
+    await db.prepare(`INSERT INTO recommendations
+      (id, evidence_id, actor, engine, schema_version, latency_ms, fallback_state,
+       request_result, response_id, recommendation_json, source_record)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .bind(
+        advisoryId,
+        record.id,
+        advisoryActor(request),
+        result.engine,
+        result.schemaVersion,
+        result.latencyMs,
+        result.fallbackState,
+        result.requestResult,
+        result.responseId,
+        JSON.stringify(result.recommendation),
+        JSON.stringify(record),
+      )
+      .run();
+  } catch {
+    return Response.json(storageFallback(record), {
+      status: 503,
+      headers: { "cache-control": "no-store" },
+    });
+  }
+
+  return Response.json({
+    ...result,
+    advisoryId,
+    note: result.mode === "ai-advisory"
+      ? "AI output is advisory only and cannot mutate governance state."
+      : `GPT advisory was not used (${result.fallbackState}); Rules v1 was applied.`,
+  }, {
+    status: rate.allowed ? 200 : 429,
+    headers: {
+      "cache-control": "no-store",
+      "x-rate-limit-limit": String(rate.limit),
+      "x-rate-limit-remaining": String(rate.remaining),
+      "x-rate-limit-reset": String(rate.resetAt),
+    },
+  });
 }

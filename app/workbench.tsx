@@ -15,6 +15,7 @@ type Evidence = {
   confidence: number;
   citations: number;
   summary: string;
+  version: number;
 };
 
 type Recommendation = {
@@ -24,13 +25,13 @@ type Recommendation = {
   risk: "low" | "medium" | "high";
 };
 
-const seed: Evidence[] = [
+const seed: Evidence[] = ([
   { id: "EV-284", title: "Enterprise AI exception pattern", source: "Architecture council notes", owner: "Maya Chen", jurisdiction: "Enterprise Architecture", classification: "Observed pattern", status: "Drift risk", authorityState: "Observation only", confidence: 86, citations: 7, summary: "Three teams are applying the same exception logic without a governed decision." },
   { id: "EV-281", title: "Regional retention interpretation", source: "Legal advisory · EMEA", owner: "Jon Bell", jurisdiction: "Data Governance", classification: "Expert interpretation", status: "Classified", authorityState: "Observation only", confidence: 74, citations: 2, summary: "A regional interpretation may be crossing into enterprise policy." },
   { id: "EV-279", title: "Model access approval sequence", source: "Production operating guide", owner: "Priya Shah", jurisdiction: "AI Platform", classification: "Operational evidence", status: "Governed", authorityState: "Governed decision", confidence: 92, citations: 4, summary: "The approved sequence is owned, scoped, and linked to its evidence." },
   { id: "EV-276", title: "Third-party model risk threshold", source: "Risk working session", owner: null, jurisdiction: "Model Risk", classification: "Candidate decision", status: "Unowned", authorityState: "Observation only", confidence: 61, citations: 1, summary: "A proposed threshold has no accountable owner." },
   { id: "EV-272", title: "PII redaction verification", source: "Control test results", owner: "Owen Wright", jurisdiction: "Security Assurance", classification: "Validated control", status: "Classified", authorityState: "Observation only", confidence: 95, citations: 2, summary: "Control tests support a repeatable verification step." },
-];
+] as Omit<Evidence, "version">[]).map((record) => ({ ...record, version: 1 }));
 
 const filters = ["All", "Review", "Drift risk", "Unowned", "Governed"];
 
@@ -45,6 +46,7 @@ export function GovernanceWorkbench() {
   const [persistence, setPersistence] = useState<"checking" | "durable" | "demo">("checking");
   const [recommendation, setRecommendation] = useState<Recommendation>(deterministicRecommendation(seed[0]));
   const [recommendationEngine, setRecommendationEngine] = useState("Rules v1");
+  const [advisoryReference, setAdvisoryReference] = useState<{ evidenceId: string; id: string } | null>(null);
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const selected = records.find((item) => item.id === active) ?? records[0];
   const metrics = pulse(records);
@@ -94,17 +96,21 @@ export function GovernanceWorkbench() {
     setRecords((current) => current.map((item) => item.id === body.evidence.id ? body.evidence : item));
     setRecommendation(deterministicRecommendation(body.evidence));
     setRecommendationEngine("Rules v1");
+    setAdvisoryReference(null);
     return body.evidence as Evidence;
   }
 
   async function runAction(action: "classify" | "assign" | "promote") {
     if (!selected) return;
     try {
-      const payload: Record<string, unknown> = { action, id: selected.id };
+      const payload: Record<string, unknown> = { action, id: selected.id, expectedVersion: selected.version };
       if (action === "classify") payload.classification = selected.classification === "Unclassified" ? "Observed pattern" : selected.classification;
       if (action === "assign") {
         payload.owner = selected.owner ?? "Maya Chen";
         payload.jurisdiction = selected.jurisdiction ?? "Enterprise Architecture";
+      }
+      if (action === "promote" && advisoryReference?.evidenceId === selected.id) {
+        payload.modelAdvisoryReference = advisoryReference.id;
       }
       const updated = await mutate(payload);
       announce(action === "promote"
@@ -137,6 +143,7 @@ export function GovernanceWorkbench() {
       setActive(body.evidence.id);
       setRecommendation(deterministicRecommendation(body.evidence));
       setRecommendationEngine("Rules v1");
+      setAdvisoryReference(null);
       setFilter("All");
       setPersistence(body.persistence ? "durable" : "demo");
       setIntakeOpen(false);
@@ -157,9 +164,11 @@ export function GovernanceWorkbench() {
         body: JSON.stringify(selected),
       });
       const body = await response.json();
+      if (!body.recommendation) throw new Error(body.error ?? "The advisory engine is unavailable.");
       setRecommendation(body.recommendation);
-      setRecommendationEngine(body.engine);
-      if (body.mode !== "ai-advisory") announce("Deterministic recommendation returned; no AI output was presented as authority.");
+      setRecommendationEngine(body.mode === "ai-advisory" ? body.engine : `${body.engine} · ${body.fallbackState}`);
+      setAdvisoryReference(body.advisoryId ? { evidenceId: selected.id, id: body.advisoryId } : null);
+      if (body.mode !== "ai-advisory") announce(`Rules v1 returned (${body.fallbackState}); no AI output was presented as authority.`);
     } catch {
       setError("The advisory engine is unavailable. Governance actions remain operational.");
     } finally {
@@ -240,6 +249,7 @@ export function GovernanceWorkbench() {
                     setActive(item.id);
                     setRecommendation(deterministicRecommendation(item));
                     setRecommendationEngine("Rules v1");
+                    setAdvisoryReference(null);
                   }} key={item.id}>
                     <span className="evidence-cell"><i>{item.id}</i><b>{item.title}</b><small>{item.source} · {item.citations} downstream citations</small></span>
                     <span className={!item.owner ? "muted owner" : "owner"}><i>{item.owner ? item.owner.split(" ").map((name) => name[0]).join("") : "?"}</i>{item.owner ?? "Unassigned"}</span>

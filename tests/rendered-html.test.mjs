@@ -32,24 +32,37 @@ test("source contains no known encoding corruption", async () => {
       readFile(new URL("../README.md", import.meta.url), "utf8"),
     ])
   ).join("\n");
-  assert.doesNotMatch(source, /Â|â€”|â†|ï¼|Ã—/);
+  assert.doesNotMatch(source, /Â|Ã‚|Ã¢â‚¬â€|Ã¢â€ |Ã¯Â¼|Ãƒâ€”/);
 });
 
-test("evidence API declares honest persistence fallback", async () => {
+test("evidence API fails closed and records immutable transition evidence", async () => {
   const route = await readFile(new URL("../app/api/evidence/route.ts", import.meta.url), "utf8");
+  const contracts = await readFile(
+    new URL("../lib/server-contracts.mjs", import.meta.url),
+    "utf8",
+  );
   assert.match(route, /persistence:\s*false/);
   assert.match(route, /authorityState:\s*"Observation only"/);
+  assert.match(route, /authenticatedActor/);
+  assert.match(contracts, /expectedVersion/);
+  assert.match(route, /prior_state/);
+  assert.match(route, /resulting_state/);
+  assert.match(route, /storage_failure/);
   assert.match(route, /governance_events/);
 });
 
-test("recommendation API labels non-model fallback", async () => {
+test("recommendation API validates and persists model and fallback provenance", async () => {
   const route = await readFile(new URL("../app/api/recommendation/route.ts", import.meta.url), "utf8");
-  assert.match(route, /model:\s*MODEL/);
-  assert.match(route, /"gpt-5\.6-sol"/);
-  assert.match(route, /engine:\s*"Rules v1",\s*mode:\s*"deterministic"/);
-  assert.match(route, /engine:\s*responseModel,\s*mode:\s*"ai-advisory"/);
-  assert.match(route, /type:\s*"json_schema"/);
+  const advisory = await readFile(new URL("../lib/advisory.mjs", import.meta.url), "utf8");
+  assert.match(advisory, /"gpt-5\.6-sol"/);
+  assert.match(advisory, /model:\s*MODEL/);
+  assert.match(advisory, /type:\s*"json_schema"/);
+  assert.match(advisory, /validateRecommendation/);
+  assert.match(advisory, /fallbackState/);
+  assert.match(route, /recommendations/);
+  assert.match(route, /advisoryId/);
   assert.doesNotMatch(route, /console\.(log|error|warn)/);
+  assert.doesNotMatch(advisory, /console\.(log|error|warn)/);
 });
 
 test("OpenAI credentials and endpoint stay out of client bundles", async () => {
@@ -62,11 +75,14 @@ test("OpenAI credentials and endpoint stay out of client bundles", async () => {
   assert.doesNotMatch(text, /\/v1\/responses/);
 });
 
-test("deployment metadata declares durable evidence storage", async () => {
+test("deployment metadata and migrations declare durable immutable audit storage", async () => {
   const hosting = JSON.parse(await readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"));
   assert.equal(hosting.d1, "DB");
   assert.equal(hosting.r2, null);
   assert.ok(hosting.project_id);
   await readFile(new URL("../drizzle/0000_faithful_human_cannonball.sql", import.meta.url), "utf8");
   await readFile(new URL("../drizzle/0001_nappy_guardian.sql", import.meta.url), "utf8");
+  const migration = await readFile(new URL("../drizzle/0002_stiff_paper_doll.sql", import.meta.url), "utf8");
+  assert.match(migration, /governance_events_no_update/);
+  assert.match(migration, /recommendations_no_delete/);
 });
