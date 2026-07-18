@@ -1,15 +1,35 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: "AROS — Evidence-to-Cornerstone Engine",
-  description: "A governance workbench where evidence earns inheritance.",
-  icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "aros-governance-workbench.mp85510.chatgpt.site";
+  const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
+  const metadataBase = new URL(`${protocol}://${host}`);
+  return {
+    metadataBase,
+    title: "AROS — Evidence-to-Cornerstone Engine",
+    description: "A governance workbench where evidence earns inheritance.",
+    icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
+    openGraph: {
+      title: "AROS — Evidence-to-Cornerstone Engine",
+      description: "Evidence earns inheritance.",
+      type: "website",
+      images: [{ url: "/og.png", width: 1536, height: 1024, alt: "AROS — Evidence earns inheritance" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "AROS — Evidence-to-Cornerstone Engine",
+      description: "Evidence earns inheritance.",
+      images: ["/og.png"],
+    },
+  };
+}
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

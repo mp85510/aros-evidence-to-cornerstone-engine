@@ -1,98 +1,78 @@
-# vinext-starter
+# AROS — Evidence-to-Cornerstone Engine
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+AROS is a governance workbench for turning organizational evidence into explicit, accountable decisions without letting repetition masquerade as authority.
 
-## Prerequisites
+## Product thesis
 
-- Node.js `>=22.13.0`
+- Observation does not become authority.
+- Repetition does not become jurisdiction.
+- Folders answer where something is; ownership answers who is responsible.
+- Evidence earns inheritance.
 
-## Quick Start
+AROS treats GPT output as advice. Only a human architect can create a governed decision, and only after classification, ownership, jurisdiction, and confidence prerequisites pass.
+
+## Version 1 workflow
+
+1. Add an evidence observation with a source.
+2. Classify the evidence.
+3. Name an accountable owner and jurisdiction.
+4. Detect authority drift when downstream citations accumulate.
+5. Ask the advisory engine for a bounded recommendation.
+6. Promote the record only through an explicit architect action.
+7. Preserve every durable mutation as a governance event.
+
+## Architecture
+
+- Next-compatible React application built with vinext for Cloudflare Workers.
+- Cloudflare D1 stores evidence records and governance events.
+- Deterministic governance rules calculate states and promotion blockers.
+- The OpenAI Responses API uses `gpt-5.6-sol` at low reasoning for architect recommendations when `OPENAI_API_KEY` is configured.
+- Structured Outputs constrain recommendations to a four-field schema.
+- When the OpenAI API is unavailable, AROS returns a labeled deterministic recommendation. It never presents fallback output as GPT output.
+- Sign in with ChatGPT and Sites access policy protect the private deployment. Write events use the authenticated email header when available.
+
+## Local development
+
+Prerequisites: Node.js 22.13 or later.
 
 ```bash
-npm install
-npm run dev
-npm run build
+pnpm install
+pnpm run dev
 ```
 
-This starter does not use `wrangler.jsonc`.
+Optional environment:
 
-## Included Shape
-
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## Workspace Auth Headers
-
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
-
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
+```bash
+OPENAI_API_KEY=your_key
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+Without that key, the workbench remains operational and clearly labels recommendations as `Rules v1`.
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+## Verification
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
+```bash
+pnpm run lint
+pnpm test
+```
 
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
+The suite covers:
 
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
+- server rendering and product metadata;
+- safe operation without D1;
+- honest AI fallback labeling;
+- authority-drift thresholds;
+- promotion prerequisites;
+- human-only authority transitions;
+- derived daily-pulse counts.
 
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
+See [docs/EVALUATION.md](docs/EVALUATION.md) for the product evaluation matrix and [docs/JUDGE_AUDIT.md](docs/JUDGE_AUDIT.md) for the ranked submission audit.
 
-## Useful Commands
+## Deployment
 
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
+The site is deployed privately with OpenAI Sites. `.openai/hosting.json` declares the logical D1 binding; Sites owns the production database and migration application.
 
-## Learn More
+Required production environment:
 
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+- `OPENAI_API_KEY` — enables live GPT‑5.6 Sol architect recommendations.
+
+No key or secret is stored in source control.

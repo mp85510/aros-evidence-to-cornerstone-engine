@@ -1,0 +1,1 @@
+CREATE INDEX `governance_events_evidence_id_idx` ON `governance_events` (`evidence_id`);
