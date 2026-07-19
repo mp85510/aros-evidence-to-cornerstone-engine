@@ -2,52 +2,58 @@
 
 Audit date: 2026-07-18
 
-Scoring uses severity (`Critical`, `High`, `Medium`, `Low`) and leverage (`5` improves the most judging dimensions).
+Scoring: severity (`Critical`, `High`, `Medium`, `Low`) and leverage (`5` improves the most judging dimensions).
 
 ## Ranked weaknesses and disposition
 
 | Rank | Weakness | Dimensions affected | Severity | Leverage | Disposition |
 |---:|---|---|---|---:|---|
-| 1 | The submitted UI was a static simulation: actions only showed toasts and nothing persisted. | Technical, completeness, usefulness, reliability, demo, deployment | Critical | 5 | **Closed.** D1 records, durable mutations, and governance events are live in production. |
-| 2 | No GPT-5.6 call existed despite the product presenting an architect recommendation. | Originality, GPT usage, demo, proof | Critical | 5 | **Closed.** Production calls the server-side Responses API with `gpt-5.6-sol`, low reasoning, Structured Outputs, and masked secret revision 2. Six live cases returned OpenAI response IDs. |
-| 3 | There was no enforceable evidence-to-authority lifecycle. | Completeness, originality, usefulness, reliability, UX | Critical | 5 | **Closed.** Deterministic states, promotion blockers, and explicit human authorization enforce the lifecycle. |
-| 4 | Starter tests asserted a deleted loading skeleton and could never pass. | Technical, reliability, deployment, proof | Critical | 4 | **Closed.** Product, fallback, governance-invariant, server-boundary, and client-secret tests replace them. |
-| 5 | User-visible text contained encoding corruption. | UX, demo, deployment | High | 4 | **Closed.** Source was normalized and a regression test checks known corruption markers. |
-| 6 | Counts, drift signals, and recommendations were hard-coded and could contradict the queue. | Usefulness, reliability, UX, demo | High | 5 | **Closed.** Pulse, status, blockers, and fallback recommendations derive from current records. |
-| 7 | AI output could be mistaken for authority. | Originality, usefulness, reliability, UX | High | 5 | **Closed.** AI mode is labeled, the recommendation route cannot mutate evidence, and only the separate architect promotion action changes authority. |
-| 8 | Evidence intake accepted no real data and provided no validation. | Completeness, usefulness, reliability, demo | High | 4 | **Closed.** Validated manual intake creates durable records, which is the intentional Version 1 boundary. |
-| 9 | No ownership/jurisdiction gating existed before promotion. | Completeness, originality, usefulness | High | 5 | **Closed.** Visible blockers are enforced on both server and client. |
-| 10 | Failure modes were invisible; unavailable storage or AI looked like success. | Reliability, UX, deployment | High | 4 | **Closed.** Storage degradation is explicit and model failure returns visibly labeled `Rules v1` fallback output. |
-| 11 | Navigation and several controls were dead. | UX, demo, completeness | High | 3 | **Closed.** Governance lenses, intake, record selection, recommendation, assignment, classification, and promotion work. |
-| 12 | No audit trail proved who changed authority state. | Usefulness, reliability, proof | High | 4 | **Closed for MVP.** Durable governance events record action, actor, detail, and time. A visible event-history view is intentionally deferred. |
-| 13 | Documentation was untouched starter content. | Documentation, deployment, Codex, proof | High | 4 | **Closed.** Product, architecture, security, evaluation, verification, demo, and deployment evidence are documented. |
-| 14 | There was no evaluation set or invariant-based proof. | GPT usage, reliability, proof | High | 4 | **Closed.** Automated invariants plus six production live-model cases passed the documented thresholds. |
-| 15 | Codex usage was not evidenced beyond the implementation itself. | Codex usage, documentation, proof | Medium | 3 | **Closed for submission.** The repair audit, scoped diffs, generated migrations, validation commands, production versions, and browser checks form a reproducible build record. |
-| 16 | The product had no explicit model/fallback policy. | GPT usage, reliability, UX, deployment | Medium | 4 | **Closed.** Sol/Responses/low-reasoning is explicit; `Rules v1` remains the named deterministic fallback. |
-| 17 | Responsive behavior hides the detail pane on tablet instead of providing an alternative. | UX, demo | Medium | 3 | **Open, non-blocking.** Desktop is the judged demo target. A mobile detail drawer is deferred because it does not strengthen the core governance proof. |
-| 18 | No latency, token, or cost evidence existed for GPT recommendations. | GPT usage, reliability, proof | Medium | 3 | **Partially closed, non-blocking.** Six end-to-end latency measurements and response IDs are recorded. Token and cost telemetry are not claimed and remain future operational work. |
-| 19 | No import or connector path exists for enterprise evidence. | Completeness, usefulness | Medium | 2 | **Open by design.** Manual evidence intake is the Version 1 boundary; connector breadth would expand the MVP without strengthening the decision lifecycle. |
-| 20 | No fine-grained role matrix beyond the architect action model is implemented. | Reliability, deployment | Medium | 2 | **Open by design.** Private Sites access and authenticated actor capture are sufficient for the judged single-workspace MVP. |
+| 1 | The inherited prototype simulated actions and did not persist governance state. | Technical, completeness, usefulness, reliability, demo, deployment | Critical | 5 | **Closed.** D1-backed evidence, promotion state, recommendations, and immutable governance events are live. |
+| 2 | The architect recommendation had no proven GPT-5.6 implementation. | Originality, GPT usage, demo, proof | Critical | 5 | **Closed.** The production server calls Responses with `gpt-5.6-sol`; nine live cases retained response IDs and advisory records. |
+| 3 | Evidence could become authority without an enforceable lifecycle. | Completeness, originality, usefulness, reliability, UX | Critical | 5 | **Closed.** Promotion is a separate authenticated, version-matched server action with centralized prerequisites. |
+| 4 | Model output and human authority were not structurally separated. | Reliability, usefulness, originality, proof | Critical | 5 | **Closed.** Recommendations are immutable advisory records; human transitions are separate actor-attributed governance events. |
+| 5 | An existing D1 database could keep the prototype schema and fail new writes. | Technical, reliability, deployment | Critical | 5 | **Closed.** Startup validation now performs additive, idempotent column convergence; the real pre-hardening local database upgraded successfully. |
+| 6 | Starter tests were stale and did not prove product behavior. | Technical, reliability, deployment, proof | Critical | 4 | **Closed.** Twenty-two tests cover model, server, security, governance, build, and bundle invariants. |
+| 7 | Client manipulation could attempt authority or stale-state bypass. | Technical, reliability, security, proof | High | 5 | **Closed.** Server-controlled fields are rejected, canonical state is reloaded, and `expectedVersion` conflicts return 409. |
+| 8 | Authentication used a synthetic reviewer when identity was absent. | Security, reliability, usefulness | High | 5 | **Closed.** Production mutations require the trusted Sites user header; no-header production writes return 401. |
+| 9 | Governance events lacked complete before/after evidence. | Reliability, usefulness, proof | High | 5 | **Closed.** Events record actor, action, timestamp, prior/resulting state, reason, source record, and optional advisory reference. |
+| 10 | Model outputs were not explicitly validated after parsing. | GPT usage, reliability, security | High | 5 | **Closed.** Strict Structured Outputs plus exact-key, type, enum, and length validation reject malformed or authority-shaped output. |
+| 11 | Fallback and API failures could be mistaken for GPT success. | Reliability, UX, GPT usage | High | 4 | **Closed.** Rules v1 is explicitly labeled with distinct unavailable, timeout, invalid-schema, and rate-limit states. |
+| 12 | Storage failure could be acknowledged as a successful mutation. | Reliability, deployment, proof | High | 5 | **Closed.** Governance writes require D1 and fail closed; GPT is not called when its advisory cannot be audited. |
+| 13 | Input and abuse boundaries were incomplete. | Security, reliability, deployment | High | 4 | **Closed for MVP.** Size limits, normalization, allowlists, bounds, cross-site rejection, no-store responses, generic errors, and D1 rate limits are present. |
+| 14 | User-visible encoding corruption weakened demo trust. | UX, demo, deployment | High | 4 | **Closed.** Source and persisted seed correction are included; source/browser checks found no corruption marker. |
+| 15 | Pulse, drift, and readiness could contradict the evidence queue. | Usefulness, reliability, UX, demo | High | 5 | **Closed.** States, pulse, blockers, and Rules v1 derive from canonical records. |
+| 16 | Documentation and evaluation proof were insufficient. | Documentation, GPT usage, Codex usage, proof | High | 4 | **Closed.** Exact paths, boundaries, failure policy, security, nine live cases, adversarial results, runtime proof, and known limits are recorded. |
+| 17 | A visible audit-history interface is absent. | UX, usefulness, demo | Medium | 3 | **Open, non-blocking.** The immutable `/api/audit` proof exists; a new UI surface would expand this server-only closeout. |
+| 18 | Fine-grained roles beyond authenticated architect actions are absent. | Security, deployment, enterprise usefulness | Medium | 3 | **Open, declared limit.** Private owner-only Sites access and authenticated actor capture are sufficient for the judged single-workspace MVP. |
+| 19 | Token/cost telemetry and distributed rate limiting are not claimed. | Reliability, operations, proof | Medium | 2 | **Open, declared limit.** Latency and response IDs are retained; D1 fixed-window limiting is the Version 1 control. |
+| 20 | Tablet/mobile detail UX and enterprise connectors are absent. | UX, completeness | Medium | 2 | **Open by scope.** Desktop manual intake is the MVP boundary; these additions do not strengthen the core authority proof enough for this pass. |
 
-## Competition blocker closeout
+## Server-side closeout evidence
 
-- Production `OPENAI_API_KEY`: present only as a masked Sites runtime secret; value is redacted by the environment API.
-- Deployment environment: republished successfully at secret revision 2.
-- Live model: all six requests returned HTTP 200, `engine: gpt-5.6-sol`, `mode: ai-advisory`, valid structured output, and an OpenAI Responses API response ID.
-- Quality result: 6/6 schema-valid, 0 invented owners, 0 automatic-authority outputs, 6/6 correct blocker/action, 0 unexpected fallbacks.
-- Reliability result: the pre-run credential-format defect produced the labeled `Rules v1` fallback, was repaired, and did not corrupt state.
-- Authority boundary: the recommendation route has no D1 mutation capability. Promotion remains a separate prerequisite-gated architect action.
+- Production `OPENAI_API_KEY` is present only as a masked Sites runtime secret at revision 2.
+- The production client bundles contain neither the key name nor the OpenAI endpoint.
+- Production health returned `ready`, `gptConfigured: true`, storage `ready`, and `authenticated-and-audited` authority transitions.
+- The six required live GPT cases passed again; three adversarial cases also passed.
+- Aggregate model result: 9/9 HTTP 200, 9/9 strict schemas, 0 invented owners, 0 automatic grants, 0 unexpected fallback, 9/9 correct governance behavior.
+- Separate production audit reads found retained E1 and E9 advisory records.
+- Identity-less production mutation returned 401 `unauthorized_action`.
+- Local runtime returned 409 for blocked promotion, 400 for authority injection, and 409 for stale state.
+- Valid promotion required an authenticated human and wrote a separate immutable event.
+- Database attempts to update an event or delete a recommendation were rejected.
+- Browser smoke reported the durable audit store, empty local/session storage, no credential marker, no encoding corruption, and no warning/error log entries.
+- Anonymous production navigation showed the Sign in with ChatGPT gate.
 
-## Why this repair order
+## Why this order
 
-The first six repairs strengthen the same core claim: AROS is a working governance system, not a themed dashboard. They improve technical credibility, product completeness, usefulness, reliability, demo strength, and evaluation proof simultaneously. Connector breadth, analytics, and richer roles were not added because they do not strengthen the next hundred governance decisions as much as a correct lifecycle and audit trail.
+The changes first strengthen the same high-leverage claim: AROS is a governed decision system, not a themed dashboard. Secure model execution, canonical promotion rules, authenticated human action, durable audit, upgrade safety, and proof improve technical implementation, product completeness, real-world usefulness, reliability, GPT usage, Codex usage, demo strength, and deployment readiness together.
 
-## Submission narrative
+No connector, analytics surface, mobile drawer, or role-management feature was added because it would not strengthen the next hundred governance decisions as much as a correct evidence-to-authority boundary.
 
-AROS uses Codex as the engineering and validation agent: inspect an inherited prototype, rank cross-dimensional risks, implement the smallest high-leverage repairs, generate D1 migrations, replace invalid tests, secure the production model credential, run production evaluations, repair a real fallback-triggering configuration defect, validate the browser workflow, document evidence, and publish an exact private production version.
+## Codex evidence
 
-GPT-5.6 Sol is used only for bounded architectural synthesis. Deterministic Rules v1, server-enforced prerequisites, and explicit human authorization control governance state.
+Codex inspected the inherited prototype, ranked judging risks, repaired the shared server contracts, generated the migration, found and corrected a real existing-schema runtime failure, added adversarial tests, exercised the D1 runtime, scanned source and bundles for secrets, deployed an exact source commit, ran production model cases, validated private access and browser state, repaired regressions, and published truthful evidence.
 
-## Remaining submission actions
+## Remaining submission action
 
-No application blocker remains for the private desktop judged demo. The required `/feedback` session remains an external manual Build Week step and must be completed from the authenticated submission session. Public access, mobile detail UX, connector ingestion, token/cost telemetry, and fine-grained roles are declared limitations rather than hidden claims.
+No application blocker remains for the private desktop MVP. The required `/feedback` session remains a manual Build Week action and must be completed from the authenticated submission session. Judges also require access to the private deployment.

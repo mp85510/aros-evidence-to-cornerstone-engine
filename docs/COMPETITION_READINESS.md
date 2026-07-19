@@ -1,78 +1,98 @@
-# Competition readiness report
+# Competition readiness
 
 Closeout date: 2026-07-18
 
-## Status
+Status: **application-ready for a private desktop Build Week review**
 
-AROS is credible as Version 1 of a real governance workbench and is ready for a private desktop Build Week demo. The production model blocker is closed. The remaining actions and limitations below are explicit.
+Production: [https://aros-governance-workbench.mp85510.chatgpt.site](https://aros-governance-workbench.mp85510.chatgpt.site)
 
 ## GPT-5.6 usage proven
 
-- Production recommendation requests run through the server-side OpenAI Responses API.
+- Exact path: browser `/api/recommendation` request → server validation/rate limit → server-only OpenAI Responses API → strict validation → immutable advisory record → browser response.
 - Requested and returned model: `gpt-5.6-sol`.
-- Reasoning effort: `low`.
-- Storage policy: `store: false`.
-- Output contract: strict four-field JSON schema.
-- Secret: masked Sites runtime `OPENAI_API_KEY`; absent from repository and production client bundles.
-- Evidence: six HTTP 200 production runs, six OpenAI response IDs, 6/6 valid schemas, 0 invented owners, 0 automatic-authority outputs, 6/6 correct governance blocker/action, and 0 unexpected fallbacks.
-- Measured latency: 4,407-7,191 ms, mean 5,866 ms.
-- Fallback: `Rules v1` remains explicitly labeled and was observed during the repaired pre-run credential-format failure.
+- Reasoning: `low`; OpenAI storage: `store: false`.
+- Output: strict `governance-recommendation.v1` with four fields.
+- Secret: masked Sites runtime `OPENAI_API_KEY`, environment revision 2.
+- Required cases: 6/6 passed.
+- Additional live adversarial cases: invented owner, automatic authority, and conflicting jurisdiction all passed.
+- Aggregate: 9/9 schemas, 0 invented owners, 0 automatic grants, 0 unexpected fallback, 9/9 correct governance behavior.
+- Live server latency: 2,234–5,929 ms; mean 3,685 ms.
+- Every live result retained an advisory ID and OpenAI response ID.
 
-Full case evidence is in [EVALUATION.md](EVALUATION.md).
+Full inputs, expected behavior, structured outputs, pass/fail status, fallback state, latency, and repairs are in [EVALUATION.md](EVALUATION.md).
+
+## Authority boundary
+
+GPT output is advisory only. The recommendation route may append an immutable advisory audit row but contains no evidence update path.
+
+Only `/api/evidence` can transition evidence. It requires an authenticated human, rejects client authority fields, reloads canonical state, checks `expectedVersion`, evaluates all promotion prerequisites on the server, and writes a separate immutable governance event. No model output can create an owner, jurisdiction, authority, or promotion without that explicit human action.
 
 ## Codex build evidence
 
-Codex continued from the inherited prototype and performed the scoped Build Week repair loop:
+Codex continued from the existing prototype and performed the scoped review/repair/validate loop:
 
-1. Reviewed and ranked product weaknesses across judging dimensions.
-2. Replaced simulated state with D1-backed evidence and governance events.
-3. Implemented deterministic lifecycle rules and server-enforced promotion gates.
-4. Added the bounded GPT-5.6 Sol Responses API route and Structured Outputs.
-5. Preserved and tested Rules v1 fallback behavior.
-6. Generated and included D1 migrations.
-7. Replaced obsolete starter tests with product and invariant tests.
-8. Secured the production secret, detected a real configuration failure through fallback, repaired it, and republished.
-9. Ran six production model evaluations and recorded response IDs and latency.
-10. Revalidated the built application and production browser workflow.
+1. Audited server routes, schemas, auth, persistence, evaluation proof, and deployment.
+2. Centralized request contracts and promotion rules.
+3. Added strict GPT response validation and explicit fallback states.
+4. Added immutable recommendation provenance and complete governance event snapshots.
+5. Removed synthetic mutation actors and added stale-write protection.
+6. Added size, validation, cross-site, error, and rate-limit boundaries.
+7. Generated D1 migrations and repaired the existing-database upgrade path after runtime testing exposed it.
+8. Added adversarial tests and reached 22/22 passing tests.
+9. Proved local persistence, immutable triggers, blocked bypass, fallback labeling, and human promotion.
+10. Scanned repository/client bundles and inspected browser storage/logs for secret exposure.
+11. Deployed the exact committed source and ran nine production GPT evaluations.
+12. Updated the submission documentation with the observed results.
 
-The repository diff, test suite, migrations, deployment versions, evaluation records, and judge audit are the reproducible evidence.
+## Reliability and security proof
 
-## Deployment URL
+- Lint, production build, and all automated tests passed.
+- Existing D1 storage upgraded additively and then accepted audited mutations.
+- Evidence, promotion state, recommendations, and events survived reload requests.
+- Event updates and recommendation deletes were rejected by database triggers.
+- Blocked promotion returned 409; authority injection returned 400; stale update returned 409; missing identity returned 401.
+- Production health reported GPT configured, D1 ready, and authority transitions authenticated/audited.
+- Production recommendation records were found through later audit requests.
+- Source and client scans found no credential-shaped value.
+- Client bundles contained no `OPENAI_API_KEY`, OpenAI endpoint, or Responses API path.
+- Browser local/session storage was empty; no credential marker or warning/error log was present.
+- Anonymous production navigation reached the Sign in with ChatGPT gate.
+- Public errors do not expose stack traces or internal configuration.
 
-[https://aros-governance-workbench.mp85510.chatgpt.site](https://aros-governance-workbench.mp85510.chatgpt.site)
+## Remaining known limits
 
-Access is private and requires Sign in with ChatGPT.
+- Judges must be granted access to the private Sites deployment.
+- Fine-grained role administration beyond authenticated architect action is not implemented.
+- A visible audit-history UI is deferred; immutable history is available through `/api/audit`.
+- D1 fixed-window rate limiting is basic Version 1 protection, not a full abuse platform.
+- Token and cost telemetry are not claimed.
+- Desktop is the judged workflow; tablet/mobile detail navigation is deferred.
+- Evidence connectors are outside the manual-intake MVP.
+
+These are declared Version 1 limits, not hidden blockers.
 
 ## Demo-ready workflow
 
-1. Open the private production URL at a desktop viewport.
-2. Point out the daily pulse and the distinction between evidence state and authority state.
-3. Add a real evidence observation.
-4. Show that intake creates an observation, not authority.
-5. Classify the record and assign accountable ownership and jurisdiction.
-6. Select a repeated record and show authority drift from citations.
-7. Request the architect recommendation; call out `gpt-5.6-sol` and `AI advisory`.
-8. Explain that the advisory cannot mutate the record.
-9. Attempt promotion on a blocked record and show the prerequisite rejection.
-10. Promote an eligible record through the explicit architect action and confirm persistence after reload.
-11. If the model is unavailable, show the same workflow continuing under visibly labeled `Rules v1`.
-
-## Remaining blockers and declared limitations
-
-- Application blockers: none for the private desktop judged MVP.
-- Submission blocker: the required `/feedback` session has not been claimed complete and must be performed manually from the authenticated Build Week submission session.
-- Declared limitations: tablet/mobile detail view, external evidence connectors, token/cost telemetry, visible event-history UI, and fine-grained multi-user roles are outside Version 1.
-- Access limitation: judges must be granted or possess access to the private Sites deployment.
+1. Open the private production URL and sign in with ChatGPT.
+2. Show Daily Pulse and distinguish evidence state from authority state.
+3. Intake a sourced observation; call out that it begins as observation only.
+4. Classify it and assign owner/jurisdiction.
+5. Select a repeated record and show authority drift.
+6. Request the architect recommendation and point to `gpt-5.6-sol · AI advisory`.
+7. Explain that the advisory writes only an audit record and cannot mutate evidence.
+8. Attempt a blocked promotion and show the server prerequisite response.
+9. Promote an eligible record through explicit architect action.
+10. Reload and confirm state/audit persistence.
+11. If GPT is unavailable, show the visibly labeled Rules v1 fallback.
 
 ## Required `/feedback` step
 
-Before final Build Week submission:
+This repository cannot complete the Build Week feedback command. Before submission, the authenticated owner must:
 
-1. Open the authenticated Build Week session.
-2. Run `/feedback`.
-3. Include the production URL.
-4. Summarize the six-case GPT-5.6 evaluation result.
-5. State that AI is advisory and only explicit architect authorization creates authority.
-6. Disclose the private-access requirement and declared Version 1 limitations.
+1. Run `/feedback` in the required Build Week session.
+2. Include the production URL.
+3. Cite the 9/9 live-model result and 22/22 automated tests.
+4. State that GPT is advisory and explicit authenticated architect action creates authority.
+5. Disclose private access and the known Version 1 limits above.
 
-Do not mark this step complete until the session itself confirms submission.
+Do not claim this step complete until the session itself confirms it.
